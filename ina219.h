@@ -38,13 +38,7 @@
 #define ina219_h
 
 
-#if ARDUINO >= 100
- #include "Arduino.h"
-#else
- #include "WProgram.h"
-#endif
-
-#include <Wire.h>
+#include <stdint.h>
 
 #define INA219_DEBUG 0
 

@@ -34,8 +34,12 @@
 * MIT license
 ******************************************************************************/
 
-#include "INA219.H"
-#include <util/delay.h>
+#include <math.h>
+
+
+#include "ina219.h"
+
+
 namespace{
 // config. register bit labels
 const uint8_t RST =	15;
@@ -59,7 +63,7 @@ INA219::INA219(t_i2caddr addr): i2c_address(addr) {
 }
 
 void INA219::begin() {
-    Wire.begin();
+   // Wire.begin();
 }
 
 void INA219::calibrate(float shunt_val, float v_shunt_max, float v_bus_max, float i_max_expected) {
@@ -136,7 +140,7 @@ void INA219::configure(  t_range range,  t_gain gain,  t_adc  bus_adc,  t_adc sh
 #define INA_RESET        0xFFFF    // send to CONFIG_R to reset unit
 void INA219::reset(){
   write16(CONFIG_R, INA_RESET);
-  _delay_ms(5);
+ // _delay_ms(5);
 }
 
 int16_t INA219::shuntVoltageRaw() const {
@@ -178,41 +182,12 @@ void INA219::write16(t_reg a, uint16_t d) const {
   uint8_t temp;
   temp = (uint8_t)d;
   d >>= 8;
-  Wire.beginTransmission(i2c_address); // start transmission to device
 
-  #if ARDUINO >= 100
-    Wire.write(a); // sends register address to read from
-    Wire.write((uint8_t)d);  // write data hibyte 
-    Wire.write(temp); // write data lobyte;
-  #else
-    Wire.send(a); // sends register address to read from
-    Wire.send((uint8_t)d);  // write data hibyte 
-    Wire.send(temp); // write data lobyte;
-  #endif
-
-  Wire.endTransmission(); // end transmission
-  delay(1);
 }
 
 int16_t INA219::read16(t_reg a) const {
-  uint16_t ret;
+  uint16_t ret=0;
 
-  // move the pointer to reg. of interest, null argument
-  write16(a, 0);
-  
-  Wire.requestFrom((int)i2c_address, 2);    // request 2 data bytes
-
-  #if ARDUINO >= 100
-    ret = Wire.read(); // rx hi byte
-    ret <<= 8;
-    ret |= Wire.read(); // rx lo byte
-  #else
-    ret = Wire.receive(); // rx hi byte
-    ret <<= 8;
-    ret |= Wire.receive(); // rx lo byte
-  #endif
-
-  Wire.endTransmission(); // end transmission
 
   return ret;
 }
