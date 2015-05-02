@@ -8,7 +8,16 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+
 #include "../ina219.h"
+
+
+#define MAG_ADDRESS        0x40
 
 #define byte unsigned char
 #define SHUNT_MAX_V 0.04 /*Rated max for our shunt is 75mv for 50 A current*/
@@ -36,10 +45,11 @@ config_t config={0};
 INA219 ina219;
 
 
-void setup()
+
+void setup(int file)
 {
   config_t config = default_config;
-  ina219.begin( );
+  ina219.begin(file);
   ina219.configure( INA219::RANGE_16V, INA219::GAIN_1_40MV, INA219::ADC_64SAMP, INA219::ADC_64SAMP, INA219::CONT_SH_BUS );
   ina219.calibrate( config.r_shunt, config.v_shunt_max, config.v_bus_max, config.i_max_expected);
 
@@ -78,8 +88,31 @@ usleep(1000);
 
 int main(int argc, char *argv[])
 {
-   
-  setup();
-  loop();
-  return 0;
+    const char *buffer;
+    const char * devName = "/dev/i2c-4";
+    int val = 0;
+
+    // Open up the I2C bus
+    int file = open(devName, O_RDWR);
+    if (file == -1)
+    {
+        perror(devName);
+        exit(1);
+    }
+    printf("*** Device '%s' opened successfully.\r\n", devName);
+    // Specify the address of the slave device.
+    if (ioctl(file, I2C_SLAVE, MAG_ADDRESS) < 0)
+    {
+        perror("Failed to acquire bus access and/or talk to slave");
+        exit(1);
+    }
+
+    printf("*** Acquired bus access to a slave device.\r\n");
+    setup(file);
+
+    loop();
+
+    close(file);
+
+    return 0;
 }

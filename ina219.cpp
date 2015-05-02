@@ -35,6 +35,14 @@
 ******************************************************************************/
 
 #include <math.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+//#include <linux/i2c.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
 
 
 #include "ina219.h"
@@ -62,8 +70,8 @@ const uint8_t MODE1	= 0;
 INA219::INA219(t_i2caddr addr): i2c_address(addr) {
 }
 
-void INA219::begin() {
-   // Wire.begin();
+void INA219::begin(int file) {
+   i2c_file=file;
 }
 
 void INA219::calibrate(float shunt_val, float v_shunt_max, float v_bus_max, float i_max_expected) {
@@ -140,7 +148,7 @@ void INA219::configure(  t_range range,  t_gain gain,  t_adc  bus_adc,  t_adc sh
 #define INA_RESET        0xFFFF    // send to CONFIG_R to reset unit
 void INA219::reset(){
   write16(CONFIG_R, INA_RESET);
- // _delay_ms(5);
+ usleep(5);
 }
 
 int16_t INA219::shuntVoltageRaw() const {
@@ -179,15 +187,24 @@ float INA219::busPower() const {
 **********************************************************************/
 
 void INA219::write16(t_reg a, uint16_t d) const {
-  uint8_t temp;
-  temp = (uint8_t)d;
-  d >>= 8;
+    int32_t val=-1;
 
+    int newInt = d ^ ((d >> 16) & 0x000000FF);
+    newInt = newInt ^ ((newInt << 16) & 0x00FF0000);
+    newInt = newInt ^ ((newInt >> 16) & 0x000000FF);
+
+    val = i2c_smbus_write_word_data(i2c_file,a, newInt);    
+    usleep(1);
 }
 
 int16_t INA219::read16(t_reg a) const {
   uint16_t ret=0;
+  write16(a, 0);
+  ret = i2c_smbus_read_word_data(i2c_file, a);
+  
+  uint16_t newInt = ret ^ ((ret>> 16) & 0x000000FF);
+  newInt = newInt ^ ((newInt << 16) & 0x00FF0000);
+  newInt = newInt ^ ((newInt >> 16) & 0x000000FF);  
 
-
-  return ret;
+  return newInt;
 }
