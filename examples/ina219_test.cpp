@@ -49,31 +49,22 @@ void setup()
 
 void loop()
 {
+
+  printf("******************\n");
+  printf("raw shunt voltage:%d\n",ina219.shuntVoltageRaw());
+  printf("raw bus voltage:%dmv\n",ina219.busVoltageRaw());
+  printf("shunt voltage:%f mv\n",(ina219.shuntVoltage() * 1000));
 #if 0
-  Serial.println("******************");
-  
-  Serial.print("raw shunt voltage: ");
-  Serial.println(monitor.shuntVoltageRaw());
-  
-  Serial.print("raw bus voltage:   ");
-  Serial.println(monitor.busVoltageRaw());
-  
-  Serial.println("--");
-  
-  Serial.print("shunt voltage: ");
-  Serial.print(monitor.shuntVoltage() * 1000, 4);
-  Serial.println(" mV");
-  
   Serial.print("shunt current: ");
-  Serial.print(monitor.shuntCurrent() * 1000, 4);
+  Serial.print(monitor.shuntCurrent() * 1000);
   Serial.println(" mA");
   
   Serial.print("bus voltage:   ");
-  Serial.print(monitor.busVoltage(), 4);
+  Serial.print(monitor.busVoltage());
   Serial.println(" V");
   
   Serial.print("bus power:     ");
-  Serial.print(monitor.busPower() * 1000, 4);
+  Serial.print(monitor.busPower() * 1000);
   Serial.println(" mW");
   
   Serial.println(" ");
@@ -81,7 +72,6 @@ void loop()
   
   delay(10000);
 #endif
-printf("hello\n");
 usleep(1000);
 }
 
