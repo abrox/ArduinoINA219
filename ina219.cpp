@@ -34,7 +34,8 @@
 * MIT license
 ******************************************************************************/
 
-#include "INA219.H"
+#include "ina219.h"
+
 #include <util/delay.h>
 namespace{
 // config. register bit labels
