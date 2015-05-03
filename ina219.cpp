@@ -43,7 +43,7 @@
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
-
+#include <cstring>
 
 #include "ina219.h"
 
@@ -188,23 +188,58 @@ float INA219::busPower() const {
 
 void INA219::write16(t_reg a, uint16_t d) const {
     int32_t val=-1;
+    uint8_t l_byte;
+    uint8_t buff[3];
+    const char *buffer;
 
-    int newInt = d ^ ((d >> 16) & 0x000000FF);
-    newInt = newInt ^ ((newInt << 16) & 0x00FF0000);
-    newInt = newInt ^ ((newInt >> 16) & 0x000000FF);
+    l_byte = (uint8_t)d;
+    d >>= 8;
+    buff[0]=a;
+    buff[1]=d;
+    buff[2]=l_byte;
 
-    val = i2c_smbus_write_word_data(i2c_file,a, newInt);    
+    if(write(i2c_file,buff,3) != 3){
+        /* ERROR HANDLING: i2c transaction failed */
+        printf("Failed write to the i2c bus.\n");
+        buffer = strerror(errno);
+        printf(buffer);
+        printf("\n\n");
+    }
+
     usleep(1);
 }
 
 int16_t INA219::read16(t_reg a) const {
-  uint16_t ret=0;
-  write16(a, 0);
-  ret = i2c_smbus_read_word_data(i2c_file, a);
-  
-  uint16_t newInt = ret ^ ((ret>> 16) & 0x000000FF);
-  newInt = newInt ^ ((newInt << 16) & 0x00FF0000);
-  newInt = newInt ^ ((newInt >> 16) & 0x000000FF);  
+    uint16_t   ret;
+    uint8_t    buff[2];
+    const char *buffer;
 
-  return newInt;
+    /*Prepare to read, move pointer to correct register*/
+    buff[0]=a;
+    if(write(i2c_file,buff,1) != 1){
+        /* ERROR HANDLING: i2c transaction failed */
+        printf("Failed write to the i2c bus.\n");
+        buffer = strerror(errno);
+        printf(buffer);
+        printf("\n\n");
+        return -1;
+     }
+
+    /*Test if this work so that we sleep for a while before read reg content*/
+    usleep(10);
+
+    if(read(i2c_file,buff,2) != 2) {
+        /* ERROR HANDLING: i2c transaction failed */
+        printf("Failed to read from the i2c bus.\n");
+        buffer = strerror(errno);
+        printf(buffer);
+        printf("\n\n");
+        return -1;
+    }
+
+    ret = buff[0];
+    ret <<= 8;
+    ret |= buff[1];
+
+    return ret;
 }
