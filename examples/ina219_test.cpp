@@ -10,10 +10,11 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <sstream>
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
-
+#include "simplemqttclient.h"
 #include "../ina219.h"
 
 
@@ -43,7 +44,7 @@ typedef struct
 const config_t default_config={config_rev,SHUNT_R,SHUNT_MAX_V,BUS_MAX_V,1.1,MAX_CURRENT,60,0};
 config_t config={0};
 INA219 ina219;
-
+SimpleMqttClient *smqtt;
 
 
 void setup(int file)
@@ -53,12 +54,21 @@ void setup(int file)
   ina219.configure( INA219::RANGE_16V, INA219::GAIN_1_40MV, INA219::ADC_64SAMP, INA219::ADC_64SAMP, INA219::CONT_SH_BUS );
   ina219.calibrate( config.r_shunt, config.v_shunt_max, config.v_bus_max, config.i_max_expected);
 
-  
-
+  smqtt = new SimpleMqttClient("localhost","ueyystusi");
+  smqtt->connectToMqttServer();
 }
 
 void loop()
 {
+
+  std::ostringstream s1,s2;
+
+  s1 << ina219.shuntCurrent();
+  s2 << ina219.busVoltage();
+
+
+  smqtt->publishToMqttServer("battery/current",s1.str());
+  smqtt->publishToMqttServer("battery/voltage",s2.str());
 
   printf("******************\n");
   printf("raw shunt voltage:%d\n",ina219.shuntVoltageRaw());
@@ -68,7 +78,7 @@ void loop()
   printf("bus voltage:      %f V\n",ina219.busVoltage());
   printf("bus power:        %f mW\n", ina219.busPower() * 1000);
 
-  usleep(1000);
+  sleep(2);
 }
 
 
@@ -95,10 +105,12 @@ int main(int argc, char *argv[])
 
     printf("*** Acquired bus access to a slave device.\r\n");
     setup(file);
-
-    loop();
+    while(1)
+    {
+      loop();
+    }
 
     close(file);
-
+    delete smqtt;
     return 0;
 }
