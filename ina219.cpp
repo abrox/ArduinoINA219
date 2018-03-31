@@ -34,9 +34,25 @@
 * MIT license
 ******************************************************************************/
 
+
 #include "ina219.h"
 
-#include <util/delay.h>
+#ifdef LINUX
+#include <math.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+//#include <linux/i2c.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <cstring>
+
+#endif
+#include "ina219.h"
+
+
 namespace{
 // config. register bit labels
 const uint8_t RST =	15;
@@ -59,8 +75,8 @@ const uint8_t MODE1	= 0;
 INA219::INA219(t_i2caddr addr): i2c_address(addr) {
 }
 
-void INA219::begin() {
-    Wire.begin();
+void INA219::begin(int file) {
+   i2c_file=file;
 }
 
 void INA219::calibrate(float shunt_val, float v_shunt_max, float v_bus_max, float i_max_expected) {
@@ -137,7 +153,7 @@ void INA219::configure(  t_range range,  t_gain gain,  t_adc  bus_adc,  t_adc sh
 #define INA_RESET        0xFFFF    // send to CONFIG_R to reset unit
 void INA219::reset(){
   write16(CONFIG_R, INA_RESET);
-  _delay_ms(5);
+ usleep(5);
 }
 
 int16_t INA219::shuntVoltageRaw() const {
@@ -176,44 +192,59 @@ float INA219::busPower() const {
 **********************************************************************/
 
 void INA219::write16(t_reg a, uint16_t d) const {
-  uint8_t temp;
-  temp = (uint8_t)d;
-  d >>= 8;
-  Wire.beginTransmission(i2c_address); // start transmission to device
+    int32_t val=-1;
+    uint8_t l_byte;
+    uint8_t buff[3];
+    const char *buffer;
 
-  #if ARDUINO >= 100
-    Wire.write(a); // sends register address to read from
-    Wire.write((uint8_t)d);  // write data hibyte 
-    Wire.write(temp); // write data lobyte;
-  #else
-    Wire.send(a); // sends register address to read from
-    Wire.send((uint8_t)d);  // write data hibyte 
-    Wire.send(temp); // write data lobyte;
-  #endif
+    l_byte = (uint8_t)d;
+    d >>= 8;
+    buff[0]=a;
+    buff[1]=d;
+    buff[2]=l_byte;
 
-  Wire.endTransmission(); // end transmission
-  delay(1);
+    if(write(i2c_file,buff,3) != 3){
+        /* ERROR HANDLING: i2c transaction failed */
+        printf("Failed write to the i2c bus.\n");
+        buffer = strerror(errno);
+        printf(buffer);
+        printf("\n\n");
+    }
+
+    usleep(1);
 }
 
 int16_t INA219::read16(t_reg a) const {
-  uint16_t ret;
+    uint16_t   ret;
+    uint8_t    buff[2];
+    const char *buffer;
 
-  // move the pointer to reg. of interest, null argument
-  write16(a, 0);
-  
-  Wire.requestFrom((int)i2c_address, 2);    // request 2 data bytes
+    /*Prepare to read, move pointer to correct register*/
+    buff[0]=a;
+    if(write(i2c_file,buff,1) != 1){
+        /* ERROR HANDLING: i2c transaction failed */
+        printf("Failed write to the i2c bus.\n");
+        buffer = strerror(errno);
+        printf(buffer);
+        printf("\n\n");
+        return -1;
+     }
 
-  #if ARDUINO >= 100
-    ret = Wire.read(); // rx hi byte
+    /*Test if this work so that we sleep for a while before read reg content*/
+    usleep(10);
+
+    if(read(i2c_file,buff,2) != 2) {
+        /* ERROR HANDLING: i2c transaction failed */
+        printf("Failed to read from the i2c bus.\n");
+        buffer = strerror(errno);
+        printf(buffer);
+        printf("\n\n");
+        return -1;
+    }
+
+    ret = buff[0];
     ret <<= 8;
-    ret |= Wire.read(); // rx lo byte
-  #else
-    ret = Wire.receive(); // rx hi byte
-    ret <<= 8;
-    ret |= Wire.receive(); // rx lo byte
-  #endif
+    ret |= buff[1];
 
-  Wire.endTransmission(); // end transmission
-
-  return ret;
+    return ret;
 }
