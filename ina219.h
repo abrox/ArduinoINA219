@@ -38,7 +38,13 @@
 #define ina219_h
 
 
-#include <stdint.h>
+#if ARDUINO >= 100
+ #include "Arduino.h"
+#else
+ #include "WProgram.h"
+#endif
+
+#include <Wire.h>
 
 #define INA219_DEBUG 0
 
@@ -123,7 +129,7 @@ class INA219
     		);
 
     /// Start i2 communication with actual device.
-    void begin( int file );
+    void begin( );
 
     /// calibration of equations and device.
     /// default values are for a 0.25 Ohm shunt on a 5V bus with max current of 1A
@@ -173,7 +179,6 @@ class INA219
         CAL_R     = 0x05     ///< calibration register.
     };
 
-    int i2c_file;
     const uint8_t  i2c_address;
     float r_shunt, current_lsb, power_lsb;
     uint16_t config, cal;
