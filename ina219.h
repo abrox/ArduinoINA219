@@ -50,11 +50,10 @@
 
 
 // default values
-
-#define D_SHUNT            0.25
+#define D_SHUNT            0.1
 #define D_V_BUS_MAX        6
-#define D_V_SHUNT_MAX        0.3
-#define D_I_MAX_EXPECTED    1
+#define D_V_SHUNT_MAX      0.3
+#define D_I_MAX_EXPECTED   0.5
 
 
 class INA219

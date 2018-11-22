@@ -201,7 +201,7 @@ void INA219::write16(t_reg a, uint16_t d) const {
   #endif
 
   Wire.endTransmission(); // end transmission
-  delay(1);
+  delay(2);
 }
 
 int16_t INA219::read16(t_reg a) const {
